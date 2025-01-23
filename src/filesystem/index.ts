@@ -12,6 +12,8 @@ import path from "path";
 import os from 'os';
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import { diffLines, createTwoFilesPatch } from 'diff';
 import { minimatch } from 'minimatch';
 
@@ -39,6 +41,7 @@ const allowedDirectories = args.map(dir =>
   normalizePath(path.resolve(expandHome(dir)))
 );
 
+/*
 // Validate that all directories exist and are accessible
 await Promise.all(args.map(async (dir) => {
   try {
@@ -52,6 +55,7 @@ await Promise.all(args.map(async (dir) => {
     process.exit(1);
   }
 }));
+*/
 
 // Security utilities
 async function validatePath(requestedPath: string): Promise<string> {
@@ -146,6 +150,15 @@ const GetFileInfoArgsSchema = z.object({
   path: z.string(),
 });
 
+const ExecuteCommandArgsSchema = z.object({
+  command: z.string(),
+});
+
+const ExecuteInDockerArgsSchema = z.object({
+  command: z.string(),
+  workdir: z.string().optional(),
+});
+
 const ToolInputSchema = ToolSchema.shape.inputSchema;
 type ToolInput = z.infer<typeof ToolInputSchema>;
 
@@ -163,7 +176,7 @@ interface FileInfo {
 const server = new Server(
   {
     name: "secure-filesystem-server",
-    version: "0.2.0",
+    version: "0.3.0",
   },
   {
     capabilities: {
@@ -334,6 +347,16 @@ async function applyFileEdits(
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
+      {
+        name: "execute_command",
+        description: "Execute a command in the container",
+        inputSchema: zodToJsonSchema(ExecuteCommandArgsSchema) as ToolInput,
+      },
+      {
+        name: "execute_in_docker",
+        description: "Execute a command in the Docker container. The command runs in the context of the container with access to container's filesystem.",
+        inputSchema: zodToJsonSchema(ExecuteInDockerArgsSchema) as ToolInput,
+      },
       {
         name: "read_file",
         description:
@@ -618,6 +641,35 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             type: "text",
             text: `Allowed directories:\n${allowedDirectories.join('\n')}`
           }],
+        };
+      }
+
+      case "execute_in_docker": {
+        const parsed = ExecuteInDockerArgsSchema.safeParse(args);
+        if (!parsed.success) {
+          throw new Error(`Invalid arguments for execute_in_docker: ${parsed.error}`);
+        }
+
+        const execPromise = promisify(exec);
+        const workdirArg = parsed.data.workdir ? `-w ${parsed.data.workdir}` : '';
+        
+        try {
+          const { stdout, stderr } = await execPromise(`docker exec ${workdirArg} mcp-filesystem ${parsed.data.command}`);
+          return {
+            content: [{ type: "text", text: stdout + (stderr ? `\nStderr:\n${stderr}` : '') }],
+          };
+        } catch (error: any) {
+          throw new Error(`Command execution failed: ${error.message}`);
+        }
+      }
+
+      case "execute_command": {
+        const parsed = ExecuteCommandArgsSchema.safeParse(args);
+        if (!parsed.success) throw new Error(`Invalid arguments: ${parsed.error}`);
+        const execPromise = promisify(exec);
+        const { stdout, stderr } = await execPromise(parsed.data.command);
+        return {
+          content: [{ type: "text", text: stdout + stderr }],
         };
       }
 
