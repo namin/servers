@@ -228,10 +228,6 @@ const GetFileInfoArgsSchema = z.object({
 
 const ExecuteCommandArgsSchema = z.object({
   command: z.string(),
-});
-
-const ExecuteInDockerArgsSchema = z.object({
-  command: z.string(),
   workdir: z.string().optional(),
 });
 
@@ -723,7 +719,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       
         try {
           const dockerExecutor = DockerExecutor.getInstance();
-          const { stdout, stderr } = await dockerExecutor.executeCommand(parsed.data.command);
+          const { stdout, stderr } = await dockerExecutor.executeCommand(parsed.data.command, parsed.data.workdir);
       
           let responseText = stdout || "";
           if (stderr) {
