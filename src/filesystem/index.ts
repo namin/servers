@@ -720,13 +720,38 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         if (!parsed.success) {
           throw new Error(`Invalid arguments for execute_command: ${parsed.error}`);
         }
-
-        const dockerExecutor = DockerExecutor.getInstance();
-        const { stdout, stderr } = await dockerExecutor.executeCommand(parsed.data.command);
-        
-        return {
-          content: [{ type: "text", text: stdout + (stderr ? `\nStderr:\n${stderr}` : '') }],
-        };
+      
+        try {
+          const dockerExecutor = DockerExecutor.getInstance();
+          const { stdout, stderr } = await dockerExecutor.executeCommand(parsed.data.command);
+      
+          let responseText = stdout || "";
+          if (stderr) {
+            responseText += `\n**Error Output:**\n${stderr}`;
+          }
+      
+          return {
+            content: [{ type: "text", text: responseText.trim() }],
+          };
+        } catch (error: any) {
+          // **Fix: Ensure we extract error messages properly**
+          let errorMessage = "Unknown error";
+      
+          if (typeof error === "string") {
+            errorMessage = error;
+          } else if (error instanceof Error) {
+            errorMessage = error.message;
+          } else if (error.stderr || error.stdout) {
+            errorMessage = `Command Execution Failed:\n${error.stderr || error.stdout}`;
+          } else {
+            errorMessage = JSON.stringify(error, null, 2); // Convert object to readable JSON
+          }
+      
+          return {
+            content: [{ type: "text", text: `Error: ${errorMessage}` }],
+            isError: true,
+          };
+        }
       }
 
       default:
