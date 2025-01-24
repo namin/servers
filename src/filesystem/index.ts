@@ -12,7 +12,7 @@ import path from "path";
 import os from 'os';
 import { z } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
-import { exec } from 'child_process';
+import { spawn } from "child_process";
 import { promisify } from 'util';
 import { diffLines, createTwoFilesPatch } from 'diff';
 import { minimatch } from 'minimatch';
@@ -39,29 +39,45 @@ class DockerExecutor {
     return `op-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  public async executeCommand(command: string,  workdir?: string): Promise<{ stdout: string; stderr: string }> {
+  public async executeCommand(command: string, workdir?: string): Promise<{ stdout: string; stderr: string }> {
     const operationId = this.generateOperationId();
   
     this.executionQueue = this.executionQueue.then(() => this.executeOperation(operationId, command, workdir));
   
-    try {
-      await this.executionQueue;
-      const execPromise = promisify(exec);
-      const result = await execPromise(`docker exec mcp_fileserver_cmd sh -c "${command}"`);
+    return new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {  // Explicit return type
+      const process = spawn("docker", ["exec", "mcp_fileserver_cmd", "sh", "-c", command], { shell: true });
   
-      return {
-        stdout: result.stdout.trim(),
-        stderr: result.stderr.trim(),
-      };
-    } catch (error: any) {
-      return {
-        stdout: '',
-        stderr: (error.stderr || error.message || "Unknown execution error").trim(),
-      };
-    } finally {
-      // Cleanup operation
+      let stdout = "";
+      let stderr = "";
+  
+      process.stdout.on("data", (data) => {
+        stdout += data.toString();
+      });
+  
+      process.stderr.on("data", (data) => {
+        stderr += data.toString();
+      });
+  
+      process.on("error", (error) => {
+        this.activeOperations.delete(operationId);
+        reject({ stdout, stderr: `Process error: ${error.message}` });
+      });
+  
+      process.on("close", (code) => {
+        this.activeOperations.delete(operationId);
+  
+        if (code === 0) {
+          resolve({ stdout: stdout.trim(), stderr: stderr.trim() });
+        } else {
+          reject({
+            stdout: stdout.trim(),
+            stderr: `Command failed with code ${code}:\n${stderr.trim() || stdout.trim()}`,
+          });
+        }
+      });
+    }).finally(() => {
       this.activeOperations.delete(operationId);
-    }
+    });
   }
 
   private async executeOperation(operationId: string, command: string, workdir?: string): Promise<void> {
