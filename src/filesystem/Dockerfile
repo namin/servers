@@ -13,6 +13,9 @@ FROM node:22-alpine AS release
 
 RUN apk add chez-scheme
 
+RUN apk add python3
+RUN apk add poetry
+
 WORKDIR /app
 
 COPY --from=builder /app/dist /app/dist
