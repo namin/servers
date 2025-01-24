@@ -39,19 +39,25 @@ class DockerExecutor {
     return `op-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  public async executeCommand(command: string, workdir?: string): Promise<{stdout: string, stderr: string}> {
+  public async executeCommand(command: string,  workdir?: string): Promise<{ stdout: string; stderr: string }> {
     const operationId = this.generateOperationId();
-    
-    // Queue the operation
+  
     this.executionQueue = this.executionQueue.then(() => this.executeOperation(operationId, command, workdir));
-    
+  
     try {
       await this.executionQueue;
       const execPromise = promisify(exec);
-      const workdirArg = workdir ? `-w ${workdir}` : '';
       const result = await execPromise(`docker exec mcp_fileserver_cmd sh -c "${command}"`);
-      //const result = await execPromise(`docker exec ${workdirArg} mcp_filesystem_cmd ${command}`);
-      return result;
+  
+      return {
+        stdout: result.stdout.trim(),
+        stderr: result.stderr.trim(),
+      };
+    } catch (error: any) {
+      return {
+        stdout: '',
+        stderr: (error.stderr || error.message || "Unknown execution error").trim(),
+      };
     } finally {
       // Cleanup operation
       this.activeOperations.delete(operationId);
