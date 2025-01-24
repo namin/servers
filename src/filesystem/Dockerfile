@@ -13,9 +13,13 @@ FROM node:22-alpine AS release
 
 RUN apk add chez-scheme
 
-RUN apk add python3
-RUN apk add poetry
 RUN apk add docker-cli
+
+RUN apk add --no-cache python3 py3-pip
+ENV VIRTUAL_ENV=/opt/venv
+RUN python3 -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+RUN pip install --upgrade pip
 
 WORKDIR /app
 
