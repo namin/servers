@@ -1,4 +1,4 @@
-# Filesystem MCP Server
+# io.livecode.ch MCP Server
 
 Node.js server implementing Model Context Protocol (MCP) for accessing io.livecode.ch repositories, but running them locally.
 
