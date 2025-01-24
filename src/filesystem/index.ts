@@ -47,7 +47,7 @@ class DockerExecutor {
     try {
       await this.executionQueue;
       const execPromise = promisify(exec);
-      const result = await execPromise(`docker exec mcp_fileserver_cmd sh -c "${command}" 2>&1`);
+      const result = await execPromise(`docker exec mcp_fileserver_cmd sh -c "${command}"`);
   
       return {
         stdout: result.stdout.trim(),
@@ -413,11 +413,6 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: zodToJsonSchema(ExecuteCommandArgsSchema) as ToolInput,
       },
       {
-        name: "execute_in_docker",
-        description: "Execute a command in the Docker container. The command runs in the context of the container with access to container's filesystem.",
-        inputSchema: zodToJsonSchema(ExecuteInDockerArgsSchema) as ToolInput,
-      },
-      {
         name: "read_file",
         description:
           "Read the complete contents of a file from the file system. " +
@@ -704,43 +699,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case "execute_in_docker": {
-        const parsed = ExecuteInDockerArgsSchema.safeParse(args);
-        if (!parsed.success) {
-          throw new Error(`Invalid arguments for execute_in_docker: ${parsed.error}`);
-        }
-
-        try {
-          const dockerExecutor = DockerExecutor.getInstance();
-          const { stdout, stderr } = await dockerExecutor.executeCommand(
-            parsed.data.command,
-            parsed.data.workdir
-          );
-          
-          return {
-            content: [{ type: "text", text: stdout + (stderr ? `\nStderr:\n${stderr}` : '') }],
-          };
-        } catch (error: any) {
-          throw new Error(`Docker command execution failed: ${error.message}`);
-        }
-      }
-
       case "execute_command": {
         const parsed = ExecuteCommandArgsSchema.safeParse(args);
         if (!parsed.success) {
           throw new Error(`Invalid arguments for execute_command: ${parsed.error}`);
         }
 
-        try {
-          const dockerExecutor = DockerExecutor.getInstance();
-          const { stdout, stderr } = await dockerExecutor.executeCommand(parsed.data.command);
-          
-          return {
-            content: [{ type: "text", text: stdout + stderr }],
-          };
-        } catch (error: any) {
-          throw new Error(`Command execution failed: ${error.message}`);
-        }
+        const dockerExecutor = DockerExecutor.getInstance();
+        const { stdout, stderr } = await dockerExecutor.executeCommand(parsed.data.command);
+        
+        return {
+          content: [{ type: "text", text: stdout + (stderr ? `\nStderr:\n${stderr}` : '') }],
+        };
       }
 
       default:
