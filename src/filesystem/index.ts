@@ -51,9 +51,9 @@ class DockerExecutor {
         "mcp_fileserver_cmd",
         "sh",
         "-c",
-        command
+        `"${command}" 2>&1`
       ];
-      const process = spawn("docker", args, { shell: true });
+      const process = spawn("docker", args, { shell: true , stdio: ["pipe", "pipe", "pipe"] });
   
       let stdout = "";
       let stderr = "";
