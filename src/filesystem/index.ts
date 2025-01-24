@@ -45,7 +45,15 @@ class DockerExecutor {
     this.executionQueue = this.executionQueue.then(() => this.executeOperation(operationId, command, workdir));
   
     return new Promise<{ stdout: string; stderr: string }>((resolve, reject) => {  // Explicit return type
-      const process = spawn("docker", ["exec", "mcp_fileserver_cmd", "sh", "-c", command], { shell: true });
+      const args = [
+        "exec",
+        ...(workdir ? ["-w", workdir] : []),
+        "mcp_fileserver_cmd",
+        "sh",
+        "-c",
+        command
+      ];
+      const process = spawn("docker", args, { shell: true });
   
       let stdout = "";
       let stderr = "";
