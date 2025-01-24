@@ -31,7 +31,7 @@ Note: all directories must be mounted to `/projects` by default.
 ```json
 {
   "mcpServers": {
-    "filesystem": {
+    "livecode": {
       "command": "docker",
       "args": [
         "run",
