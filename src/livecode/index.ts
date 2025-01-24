@@ -107,7 +107,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 async function runServer() {
   const transport = new StdioServerTransport();
   await server.connect(transport);
-  console.error("io.livecode.ch Server running on stdio");
+  //console.error("io.livecode.ch Server running on stdio");
 }
 
 runServer().catch((error) => {
