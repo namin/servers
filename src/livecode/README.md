@@ -18,6 +18,7 @@ Node.js server implementing Model Context Protocol (MCP) for accessing io.liveco
     - `repo` (string): repo under username on Github
     - `pre` (string): Optional pre code
     - `post` (string): Optional post code
+    - `image` (string): Optional livecode base image
 
 ## Usage with Claude Desktop
 Add this to your `claude_desktop_config.json`:
@@ -34,9 +35,27 @@ Note: all directories must be mounted to `/projects` by default.
       "command": "docker",
       "args": [
         "run",
+        "-i",
+        "--rm",
         "-v", "/var/run/docker.sock:/var/run/docker.sock",
         "-v", "/tmp/snippets:/tmp/snippets",
         "mcp/livecode"
+      ]
+    }
+  }
+}
+```
+
+### NPX
+
+```json
+{
+  "mcpServers": {
+    "livecode": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-livecode"
       ]
     }
   }
