@@ -47,7 +47,7 @@ class DockerExecutor {
     try {
       await this.executionQueue;
       const execPromise = promisify(exec);
-      const result = await execPromise(`docker exec mcp_fileserver_cmd sh -c "${command}"`);
+      const result = await execPromise(`docker exec mcp_fileserver_cmd sh -c "${command}" 2>&1`);
   
       return {
         stdout: result.stdout.trim(),
