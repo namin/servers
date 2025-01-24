@@ -1,0 +1,38 @@
+{
+  "name": "@modelcontextprotocol/server-livecode",
+  "version": "0.6.2",
+  "description": "MCP server for running io.livecode.ch locally",
+  "license": "MIT",
+  "author": "Nada Amin (https://namin.org)",
+  "homepage": "https://modelcontextprotocol.io",
+  "bugs": "https://github.com/modelcontextprotocol/servers/issues",
+  "type": "module",
+  "bin": {
+    "mcp-server-livecode": "dist/index.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc && shx chmod +x dist/*.js",
+    "prepare": "npm run build",
+    "watch": "tsc --watch"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "0.5.0",
+    "diff": "^5.1.0",
+    "docker-modem": "^3.0.8",
+    "dockerode": "^4.0.4",
+    "glob": "^10.3.10",
+    "minimatch": "^10.0.1",
+    "zod-to-json-schema": "^3.23.5"
+  },
+  "devDependencies": {
+    "@types/diff": "^5.0.9",
+    "@types/dockerode": "^3.3.34",
+    "@types/minimatch": "^5.1.2",
+    "@types/node": "^22",
+    "shx": "^0.3.4",
+    "typescript": "^5.3.3"
+  }
+}
