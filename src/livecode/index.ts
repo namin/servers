@@ -71,6 +71,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   };
 });
 
+function sanitizeOutput(output: string): string {
+  return output.replace(/[^\x20-\x7E]/g, "").trim(); // Remove non-printable characters & trim spaces
+}
+
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
       if (request.params.name !== 'run_code') {
@@ -90,16 +94,16 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       } else if (result.status === 124) {
           throw new Error("Infinite loop detected");
       }
-    
+
       return {
-          content: [{ type: "text", text: result.output }],
-      };
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    return {
-      content: [{ type: "text", text: `Error: ${errorMessage}` }],
-      isError: true,
+      content: [{ type: "text", text: "Result: " + sanitizeOutput(String(result.output || "No output")) }],
     };
+  } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      return {
+          content: [{ type: "text", text: `Error: ${sanitizeOutput(errorMessage)}` }],
+          isError: true,
+      };
   }
 });
 
