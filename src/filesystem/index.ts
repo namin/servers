@@ -17,6 +17,60 @@ import { promisify } from 'util';
 import { diffLines, createTwoFilesPatch } from 'diff';
 import { minimatch } from 'minimatch';
 
+// Docker execution synchronization
+class DockerExecutor {
+  private static instance: DockerExecutor;
+  private executionQueue: Promise<void>;
+  private activeOperations: Set<string>;
+
+  private constructor() {
+    this.executionQueue = Promise.resolve();
+    this.activeOperations = new Set();
+  }
+
+  public static getInstance(): DockerExecutor {
+    if (!DockerExecutor.instance) {
+      DockerExecutor.instance = new DockerExecutor();
+    }
+    return DockerExecutor.instance;
+  }
+
+  private generateOperationId(): string {
+    return `op-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  }
+
+  public async executeCommand(command: string, workdir?: string): Promise<{stdout: string, stderr: string}> {
+    const operationId = this.generateOperationId();
+    
+    // Queue the operation
+    this.executionQueue = this.executionQueue.then(() => this.executeOperation(operationId, command, workdir));
+    
+    try {
+      await this.executionQueue;
+      const execPromise = promisify(exec);
+      const workdirArg = workdir ? `-w ${workdir}` : '';
+      const result = await execPromise(`docker exec mcp_fileserver_cmd sh -c "${command}"`);
+      //const result = await execPromise(`docker exec ${workdirArg} mcp_filesystem_cmd ${command}`);
+      return result;
+    } finally {
+      // Cleanup operation
+      this.activeOperations.delete(operationId);
+    }
+  }
+
+  private async executeOperation(operationId: string, command: string, workdir?: string): Promise<void> {
+    if (this.activeOperations.has(operationId)) {
+      throw new Error('Operation already in progress');
+    }
+    
+    this.activeOperations.add(operationId);
+  }
+
+  public isOperationActive(operationId: string): boolean {
+    return this.activeOperations.has(operationId);
+  }
+}
+
 // Command line argument parsing
 const args = process.argv.slice(2);
 if (args.length === 0) {
@@ -650,27 +704,37 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           throw new Error(`Invalid arguments for execute_in_docker: ${parsed.error}`);
         }
 
-        const execPromise = promisify(exec);
-        const workdirArg = parsed.data.workdir ? `-w ${parsed.data.workdir}` : '';
-        
         try {
-          const { stdout, stderr } = await execPromise(`docker exec ${workdirArg} mcp-filesystem ${parsed.data.command}`);
+          const dockerExecutor = DockerExecutor.getInstance();
+          const { stdout, stderr } = await dockerExecutor.executeCommand(
+            parsed.data.command,
+            parsed.data.workdir
+          );
+          
           return {
             content: [{ type: "text", text: stdout + (stderr ? `\nStderr:\n${stderr}` : '') }],
           };
         } catch (error: any) {
-          throw new Error(`Command execution failed: ${error.message}`);
+          throw new Error(`Docker command execution failed: ${error.message}`);
         }
       }
 
       case "execute_command": {
         const parsed = ExecuteCommandArgsSchema.safeParse(args);
-        if (!parsed.success) throw new Error(`Invalid arguments: ${parsed.error}`);
-        const execPromise = promisify(exec);
-        const { stdout, stderr } = await execPromise(parsed.data.command);
-        return {
-          content: [{ type: "text", text: stdout + stderr }],
-        };
+        if (!parsed.success) {
+          throw new Error(`Invalid arguments for execute_command: ${parsed.error}`);
+        }
+
+        try {
+          const dockerExecutor = DockerExecutor.getInstance();
+          const { stdout, stderr } = await dockerExecutor.executeCommand(parsed.data.command);
+          
+          return {
+            content: [{ type: "text", text: stdout + stderr }],
+          };
+        } catch (error: any) {
+          throw new Error(`Command execution failed: ${error.message}`);
+        }
       }
 
       default:

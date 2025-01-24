@@ -15,6 +15,7 @@ RUN apk add chez-scheme
 
 RUN apk add python3
 RUN apk add poetry
+RUN apk add docker-cli
 
 WORKDIR /app
 
