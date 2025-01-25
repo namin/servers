@@ -736,7 +736,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             content: [{ type: "text", text: responseText.trim() }],
           };
         } catch (error: any) {
-          // **Fix: Ensure we extract error messages properly**
           let errorMessage = "Unknown error";
       
           if (typeof error === "string") {
