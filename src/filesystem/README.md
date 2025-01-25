@@ -1,10 +1,10 @@
 # Filesystem MCP Server
 
-Node.js server implementing Model Context Protocol (MCP) for filesystem operations.
+Node.js server implementing Model Context Protocol (MCP) for filesystem operations, plus re-entrant docker execution.
 
 ## Features
 
-- Execute code in the docker env
+- Execute re-entrant code in the docker env
 - Read/write files
 - Create/list/delete directories
 - Move files/directories
@@ -25,7 +25,7 @@ Node.js server implementing Model Context Protocol (MCP) for filesystem operatio
   - Execute a command in the docker environment.
   - Inputs:
     - `command` (string): command to execute
-    - `workdir` (string): optional working diretory
+    - `workdir` (string): optional working directory
 
 - **read_file**
   - Read complete contents of a file
@@ -158,6 +158,7 @@ Note: all directories must be mounted to `/projects` by default.
     }
   }
 }
+```
 
 ### NPX
 
