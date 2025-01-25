@@ -125,7 +125,6 @@ const allowedDirectories = args.map(dir =>
   normalizePath(path.resolve(expandHome(dir)))
 );
 
-/*
 // Validate that all directories exist and are accessible
 await Promise.all(args.map(async (dir) => {
   try {
@@ -139,7 +138,6 @@ await Promise.all(args.map(async (dir) => {
     process.exit(1);
   }
 }));
-*/
 
 // Security utilities
 async function validatePath(requestedPath: string): Promise<string> {
