@@ -147,33 +147,22 @@ Note: all directories must be mounted to `/projects` by default.
       "command": "docker",
       "args": [
         "run",
-        "--name", "mcp_fileserver_cmd",
+        "--name",
+        "mcp_fileserver_cmd",
         "-i",
         "--rm",
-        "-v", "/var/run/docker.sock:/var/run/docker.sock",
-        "--mount", "type=bind,src=/Users/username/Desktop,dst=/projects/Desktop",
+        "--user", "nonroot",
+        "-v",
+        "/var/run/docker.sock:/var/run/docker.sock",
+        "-p", "11434:11434",
+        "-e", "OLLAMA_HOST=0.0.0.0:11434",
+        "-v", "ollama_data:/Users/username/.ollama",
+        "--mount",
+        "type=bind,src=/Users/username/code/cld,dst=/home/nonroot/projects/code",
         "mcp/filesystem_cmd",
-        "/projects"
+        "/home/nonroot/projects"
       ]
-    }
-  }
-}
-```
-
-### NPX
-
-```json
-{
-  "mcpServers": {
-    "filesystem": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "/Users/username/Desktop",
-        "/path/to/other/allowed/dir"
-      ]
-    }
+    },
   }
 }
 ```
@@ -183,7 +172,7 @@ Note: all directories must be mounted to `/projects` by default.
 Docker build:
 
 ```bash
-docker build -t mcp/filesystem -f src/filesystem/Dockerfile .
+docker build -t mcp/filesystem_cmd -f src/filesystem/Dockerfile .
 ```
 
 ## License
