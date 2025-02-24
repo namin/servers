@@ -147,8 +147,6 @@ Note: all directories must be mounted to `/projects` by default.
       "command": "docker",
       "args": [
         "run",
-        "--name",
-        "mcp_fileserver_cmd",
         "-i",
         "--rm",
         "--user", "nonroot",
